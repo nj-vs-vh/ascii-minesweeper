@@ -9,8 +9,6 @@ Assist mode:
 
 ![main_view](screenshots/main.png)
 
-![assist_view](screenshots/assist.png)
-
 
 ## Installation and usage
 
