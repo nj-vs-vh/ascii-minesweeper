@@ -12,10 +12,6 @@ b = Board(10, 13, 30)
 b.render()
 
 
-# print(''.join(b.FREQ_COLORMAP))
-# print(''.join([b.mine_prob_colormap(freq / 30) for freq in range(30)]))
-
-
 @dataclass
 class Action:
     letter: str
