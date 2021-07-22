@@ -55,7 +55,7 @@ while True:
             b.render(pointer=(i, j))
             break
         except ValueError as e:
-            print(f'Problem parsing coordinates, try again or ":q" for exit (details: {e})')
+            print(f'Problem parsing coordinates, try again or leave empty (details: {e})')
     target_action_letter = input(f'Action ({" | ".join([str(a) for a in actions])}) -> ').upper()
     for action in actions:
         if action.letter == target_action_letter:
@@ -66,7 +66,7 @@ while True:
     b.render()
 
     if b.game_over:
-        print('\ngame over :(')
+        print(ansi.modify('\n\tgame over!', codes=[ansi.TEXT.RED, ansi.TEXT.UNDER]))
         break
     elif b.game_winned:
         print(ansi.modify('\ncongratulations!', codes=[ansi.TEXT.RED, ansi.TEXT.UNDER]))
