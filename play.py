@@ -37,7 +37,7 @@ actions = [
     Action('U', b.unmark_cell, 'Unmark'),
     Action('N', b.open_neighbors, 'Open neighbors'),
     Action('C', lambda *_: None, 'Change cell'),
-    Action('F', lambda *_: b.play_forward(), 'Play forward'),
+    Action('F', lambda *_: b.play_forward(), 'Fast forward'),
     Action('E', lambda *_: b.evaluate_probabilities(), 'Evaluate probabilities'),
     Action('I', lambda *_: b.info(), 'Info'),
     Action('Q', lambda *_: sys.exit(), 'Quit'),

@@ -1,12 +1,10 @@
 # ascii-minesweeper
 
-A simple ASCII-graphics implementation of the minesweeper with 'assist mode'.
-
-Controls from keyboard.
+A simple ASCII-graphics in-terminal implementation of the minesweeper with 'assist mode'.
 
 Assist mode:
- * simple: press 'F' to open open all obvious cells (i.e. when 2-cell has exactly 2 cells around)
- * probabilistic: press 'E' to brute-force all possible mine locations with respect to constrains and calculate probabilities for each unopened cell. Assumes that all marked mines are correct. Works for sufficiently small amount of mines and unopened cells left.
+ * simple: press 'F' to fast-forward all obvious cells (e.g. when 2-cell has exactly 2 unopened cells around). 'Higher-order' logic is not implemented.
+ * probabilistic: press 'E' to brute-force all possible mine locations with respect to constrains and calculate probabilities for each unopened cell to contain the mine. This procedure assumes all cells marked as mines to be correct. Works for sufficiently small amount of mines and unopened cells.
 
 
 ![main_view](screenshots/main.png)
@@ -23,4 +21,4 @@ pip install -r requirements.txt
 python play.py
 ```
 
-To change field size and amount of mines edit values in play.py directly.
+To change field size and mine count edit the values in `play.py` manually.
