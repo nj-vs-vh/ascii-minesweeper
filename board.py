@@ -160,7 +160,7 @@ class Board:
             return
         
         total_choices = math.comb(self.cells_left, self.mines_left)
-        if total_choices > 1e9:
+        if total_choices > 1e8:
             print(ansi.modify("\nToo much choices, probably better just guess :(\n", [ansi.TEXT.BOLD]))
             return
 
