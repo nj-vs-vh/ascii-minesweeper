@@ -8,7 +8,7 @@ from board import Board
 import ansi
 
 
-b = Board(10, 13, 30)
+b = Board(rows=10, cols=13, mines=30)
 b.render()
 
 
