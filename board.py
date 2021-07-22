@@ -26,6 +26,9 @@ class Board:
         self.board_created = False
         self.game_over = False
 
+        self.mine_freq = None
+        self.mine_total_combinations = None
+
     def _init_board(self):
         is_mine_flat = np.zeros(self.cells_count, dtype=bool)
         is_mine_flat[np.random.choice(self.cells_count, self.mines, replace=False)] = True
@@ -158,7 +161,7 @@ class Board:
         
         total_choices = math.comb(self.cells_left, self.mines_left)
         if total_choices > 1e9:
-            print("\nToo much choices, probably better just guess :(\n")
+            print(ansi.modify("\nToo much choices, probably better just guess :(\n", [ansi.TEXT.BOLD]))
             return
 
         is_trial = np.logical_not(self.is_open + self.is_marked)
@@ -205,22 +208,8 @@ class Board:
 
         freq = np.zeros((self.cells_count), dtype=int)
         freq[trial_idx_flat] = trial_freq_flat
-        freq = freq.reshape((self.rows, self.cols))
-
-        scaled_prob = freq / np.max(freq)
-
-        def cell_char(i: int, j: int) -> str:
-            return self.mine_prob_colormap(scaled_prob[i, j])
-
-        self._render_field(cell_char)
-
-        freq_values = np.unique(freq)
-        mine_prob_values = freq_values / total_valid_combinations
-        scaled_prob_values = freq_values / np.max(freq)
-
-        print(ansi.modify('Mine probability:\n', codes=[ansi.TEXT.BOLD]))
-        print(''.join([s * 6 for s in [self.mine_prob_colormap(sp) for sp in scaled_prob_values]]))
-        print(''.join([f' {p:.2f} ' for p in mine_prob_values]))
+        self.mine_freq = freq.reshape((self.rows, self.cols))
+        self.mine_total_combinations = total_valid_combinations
 
     @property
     def game_winned(self) -> bool:
@@ -328,7 +317,11 @@ class Board:
                 elif self.is_marked[i, j]:
                     ch = '×'
                 else:
-                    ch = ' '
+                    if self.mine_freq is None:
+                        ch = ' '
+                    else:
+                        scaled_mine_prob = self.mine_freq[i, j] / np.max(self.mine_freq)
+                        ch = self.mine_prob_colormap(scaled_mine_prob)
             else:
                 ch = ' '
 
@@ -339,3 +332,12 @@ class Board:
                 return ansi.modify(ch, codes=[ansi.TEXT.RED, ansi.TEXT.BOLD])
             
         self._render_field(cell_char)
+
+        if self.mine_freq is not None:
+            freq_values = np.unique(self.mine_freq)
+            mine_prob_values = freq_values / self.mine_total_combinations
+            scaled_prob_values = freq_values / np.max(self.mine_freq)
+
+            print(ansi.modify('Mine probability:\n', codes=[ansi.TEXT.BOLD]))
+            print(''.join([s * 6 for s in [self.mine_prob_colormap(sp) for sp in scaled_prob_values]]))
+            print(''.join([f' {p:.2f} ' for p in mine_prob_values]))
