@@ -2,13 +2,13 @@ import sys
 from dataclasses import dataclass
 from string import ascii_letters, digits
 
-from typing import Callable
+from typing import Callable, Tuple
 
 from board import Board
 import ansi
 
 
-b = Board(rows=10, cols=13, mines=30)
+b = Board(rows=15, cols=18, mines=65)
 b.render()
 
 
@@ -17,6 +17,7 @@ class Action:
     letter: str
     func: Callable[[int, int], None]
     description: str
+    is_positional: bool
 
     def __str__(self):
         words_modified = []
@@ -28,24 +29,25 @@ class Action:
 
 
 actions = [
-    Action('O', b.open_cell, 'Open'),
-    Action('M', b.mark_cell, 'Mark'),
-    Action('U', b.unmark_cell, 'Unmark'),
-    Action('N', b.open_neighbors, 'Open neighbors'),
-    Action('C', lambda *_: None, 'Change cell'),
-    Action('F', lambda *_: b.play_forward(), 'Fast forward'),
-    Action('E', lambda *_: b.evaluate_probabilities(), 'Evaluate probabilities'),
-    Action('I', lambda *_: b.info(), 'Info'),
-    Action('Q', lambda *_: sys.exit(), 'Quit'),
+    Action('O', b.open_cell, 'Open', True),
+    Action('M', b.mark_cell, 'Mark', True),
+    Action('U', b.unmark_cell, 'Unmark', True),
+    Action('N', b.open_neighbors, 'Open neighbors', True),
+    Action('C', lambda *_: None, 'Change cell', False),
+    Action('F', lambda *_: b.play_forward(), 'Fast forward', False),
+    Action('E', lambda *_: b.evaluate_probabilities(), 'Evaluate probabilities', False),
+    Action('I', lambda *_: b.info(), 'Info', False),
+    Action('P', lambda *_: b.render_as_plot(), 'Plot', False),
+    Action('Q', lambda *_: sys.exit(), 'Quit', False),
 ]
 
 
-while True:
+def input_coordinates() -> Tuple[int, int]:
     while True:
-        coords_str = input('Coordinates (leave empty for non-positional actions) -> ')
+        coords_str = input('Coordinates (empty for non-positional actions) -> ')
         if coords_str == '':
-            i, j = None, None
-            break
+            # non-positional action expected!
+            return None, None
         try:
             i_str = ''.join([ch for ch in coords_str if ch in digits])
             i = int(i_str)
@@ -53,9 +55,14 @@ while True:
             b._validate_index(i, column=False)
             b._validate_index(j, column=True)
             b.render(pointer=(i, j))
-            break
+            return i, j
         except ValueError as e:
-            print(f'Problem parsing coordinates, try again or leave empty (details: {e})')
+            print(f'Can\'t coordinates, try again or leave empty (details: {e})')
+
+
+while True:
+    i, j = input_coordinates()
+
     target_action_letter = input(f'Action ({" | ".join([str(a) for a in actions])}) -> ').upper()
     for action in actions:
         if action.letter == target_action_letter:
@@ -63,6 +70,7 @@ while True:
             break
     else:
         continue
+
     b.render()
 
     if b.game_over:

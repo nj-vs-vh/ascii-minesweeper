@@ -1,4 +1,6 @@
+matplotlib==3.4.2
 numba==0.53.1
 numpy==1.21.1
+PyQt5==5.15.4
 scipy==1.7.0
 tqdm==4.61.2
