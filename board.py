@@ -161,7 +161,7 @@ class Board:
         
         total_choices = math.comb(self.cells_left, self.mines_left)
         if total_choices > 1e8:
-            print(ansi.modify("\nToo much choices, probably better just guess :(\n", [ansi.TEXT.BOLD]))
+            print(ansi.modify("\nToo much choices to brute-force :(\n", [ansi.TEXT.BOLD]))
             return
 
         is_trial = np.logical_not(self.is_open + self.is_marked)
@@ -169,7 +169,7 @@ class Board:
         for i in range(self.rows):
             for j in range(self.cols):
                 is_affected[i, j] = self.count_neighbors(i, j, is_trial) > 0
-        is_affected = is_affected * np.logical_not(is_trial)
+        is_affected = is_affected * self.is_open
 
         # all currently marked mines are treated as true
         # all hypothetical mines will be added to this array in-place
@@ -320,7 +320,7 @@ class Board:
                     if self.mine_freq is None:
                         ch = ' '
                     else:
-                        scaled_mine_prob = self.mine_freq[i, j] / np.max(self.mine_freq)
+                        scaled_mine_prob = self.mine_freq[i, j] / self.mine_total_combinations
                         ch = self.mine_prob_colormap(scaled_mine_prob)
             else:
                 ch = ' '
@@ -336,8 +336,8 @@ class Board:
         if self.mine_freq is not None:
             freq_values = np.unique(self.mine_freq)
             mine_prob_values = freq_values / self.mine_total_combinations
-            scaled_prob_values = freq_values / np.max(self.mine_freq)
+            # scaled_prob_values = freq_values / np.max(self.mine_freq)
 
             print(ansi.modify('Mine probability:\n', codes=[ansi.TEXT.BOLD]))
-            print(''.join([s * 6 for s in [self.mine_prob_colormap(sp) for sp in scaled_prob_values]]))
+            print(''.join([s * 6 for s in [self.mine_prob_colormap(sp) for sp in mine_prob_values]]))
             print(''.join([f' {p:.2f} ' for p in mine_prob_values]))
