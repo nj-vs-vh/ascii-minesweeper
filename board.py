@@ -223,7 +223,11 @@ class Board:
         freq_mask[trial_idx_flat] = True
         self.mine_freq_mask = freq_mask.reshape((self.rows, self.cols))
         self.mine_freq = freq.reshape((self.rows, self.cols))
-        self.mine_total_combinations = total_valid_combinations
+        if total_valid_combinations == 0:
+            self.mine_total_combinations = 1
+            print(ansi.modify('No valid combinations found!', [ansi.BACK.RED]))
+        else:
+            self.mine_total_combinations = total_valid_combinations
 
     @property
     def game_winned(self) -> bool:
