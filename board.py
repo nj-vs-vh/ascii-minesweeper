@@ -104,6 +104,7 @@ class Board:
             return
         while True:
             marked_before = np.sum(self.is_marked)
+            open_before = np.sum(self.is_open)
             for i in range(self.rows):
                 for j in range(self.cols):
                     if not self.is_open[i, j] or self.near_mines[i, j] == 0:
@@ -116,7 +117,7 @@ class Board:
             for i in range(self.rows):
                 for j in range(self.cols):
                     self.open_neighbors(i, j)
-            if np.sum(self.is_marked) - marked_before == 0:
+            if np.sum(self.is_marked) == marked_before and np.sum(self.is_open) == open_before:
                 break
 
     @property
