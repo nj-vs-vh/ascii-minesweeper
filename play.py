@@ -73,7 +73,10 @@ def input_coordinates() -> List[Coordinates]:
                 coords_list.append(Coordinates(i, j))
             except ValueError as e:
                 print_game_msg(f'Can\'t parse coordinates from "{coord}", try again or leave empty (details: {e})')
-        return coords_list
+                break
+        else:
+            break
+    return coords_list
 
 
 while True:
