@@ -13,7 +13,7 @@ from matplotlib.patches import Rectangle, Circle
 from matplotlib.lines import Line2D
 from matplotlib.cm import get_cmap, ScalarMappable
 
-from typing import Callable, Generator, Tuple, Union, Optional
+from typing import Callable, Generator, Tuple, Union, Optional, List
 
 
 import ansi
@@ -30,6 +30,9 @@ class Board:
         self.cols = cols
         self.mines = mines
         self.column_index_letters = ascii_uppercase[:self.cols]
+        self.is_open = self._flat2plane(np.zeros(self.cells_count, dtype=bool))
+        self.is_marked = self._flat2plane(np.zeros(self.cells_count, dtype=bool))
+        self.is_pointer = self._flat2plane(np.zeros(self.cells_count, dtype=bool))
 
         self.board_created = False
         self.game_over = False
@@ -42,8 +45,6 @@ class Board:
         is_mine_flat = np.zeros(self.cells_count, dtype=bool)
         is_mine_flat[np.random.choice(self.cells_count, self.mines, replace=False)] = True
         self.is_mine = self._flat2plane(is_mine_flat)
-        self.is_marked = self._flat2plane(np.zeros(self.cells_count, dtype=bool))
-        self.is_open = self._flat2plane(np.zeros(self.cells_count, dtype=bool))
 
         self.near_mines = np.zeros((self.rows, self.cols), dtype=int)
         for i, j in self._board_idx():
@@ -251,6 +252,13 @@ class Board:
         else:
             self.mine_total_combinations = total_valid_combinations
 
+    def set_pointers(self, pointers: List[Tuple[int, str]]):
+        self.is_pointer[:] = False
+        for i, j in pointers:
+            i = self._validate_index(i, column=False)
+            j = self._validate_index(j, column=True)
+            self.is_pointer[i, j] = True
+
     @property
     def game_winned(self) -> bool:
         if not self.board_created:
@@ -340,12 +348,7 @@ class Board:
         8: ansi.TEXT.YELLOW,
     }
 
-    def render(self, pointer: Optional[Tuple[int, int]] = None):
-        if pointer is not None:
-            pointer = (
-                self._validate_index(pointer[0], column=False),
-                self._validate_index(pointer[1], column=True),
-            )
+    def render(self):
 
         def cell_char(i, j) -> str:
             if self.board_created:
@@ -370,11 +373,9 @@ class Board:
             else:
                 ch = ' '
 
-            if pointer is None or i != pointer[0] or j != pointer[1]:
-                return ch
-            else:
-                ch = '·' if ch == ' ' else ch
-                return ansi.modify(ch, codes=[ansi.TEXT.RED, ansi.TEXT.BOLD])
+            if self.is_pointer[i, j]:
+                ch = ansi.modify(ch, [ansi.BACK.MAGENTA, ansi.TEXT.BOLD])
+            return ch
             
         self._render_field(cell_char)
 

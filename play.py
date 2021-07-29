@@ -2,7 +2,7 @@ import sys
 from dataclasses import dataclass
 from string import ascii_letters, digits
 
-from typing import Callable, Tuple
+from typing import Callable, List
 
 from board import Board
 import ansi
@@ -27,55 +27,86 @@ class Action:
             words_modified.append(word)
         return ' '.join(words_modified)
 
+    def __call__(self, *args):
+        return self.func(*args)
+
 
 actions = [
     Action('O', b.open_cell, 'Open', True),
     Action('M', b.mark_cell, 'Mark', True),
     Action('U', b.unmark_cell, 'Unmark', True),
     Action('N', b.open_neighbors, 'Open neighbors', True),
-    Action('C', lambda *_: None, 'Change cell', False),
-    Action('F', lambda *_: b.fast_forward(), 'Fast forward', False),
-    Action('E', lambda *_: b.evaluate_probabilities(), 'Evaluate probabilities', False),
-    Action('I', lambda *_: b.info(), 'Info', False),
-    Action('P', lambda *_: b.render_as_plot(), 'Plot', False),
-    Action('Q', lambda *_: sys.exit(), 'Quit', False),
+    Action('C', lambda: None, 'Change cell', False),
+    Action('F', lambda: b.fast_forward(), 'Fast forward', False),
+    Action('E', lambda: b.evaluate_probabilities(), 'Evaluate probabilities', False),
+    Action('I', lambda: b.info(), 'Info', False),
+    Action('P', lambda: b.render_as_plot(), 'Plot', False),
+    Action('Q', lambda: sys.exit(), 'Quit', False),
 ]
 
+actions_by_letter = {
+    a.letter: a for a in actions
+}
 
-def input_coordinates() -> Tuple[int, int]:
+
+@dataclass
+class Coordinates:
+    i: int
+    j: str
+
+
+def print_game_msg(s: str):
+    print(ansi.modify(s, [ansi.TEXT.RED, ansi.TEXT.BOLD]))
+
+
+def input_coordinates() -> List[Coordinates]:
     while True:
         coords_str = input('Coordinates (empty for non-positional actions) -> ')
-        if coords_str == '':
-            # non-positional action expected!
-            return None, None
-        try:
-            i_str = ''.join([ch for ch in coords_str if ch in digits])
-            i = int(i_str)
-            j = ''.join([ch for ch in coords_str if ch in ascii_letters])
-            b._validate_index(i, column=False)
-            b._validate_index(j, column=True)
-            b.render(pointer=(i, j))
-            return i, j
-        except ValueError as e:
-            print(f'Can\'t coordinates, try again or leave empty (details: {e})')
+        coords_list = []
+        for coord in coords_str.split():
+            try:
+                i_str = ''.join([ch for ch in coord if ch in digits])
+                i = int(i_str)
+                j = ''.join([ch for ch in coord if ch in ascii_letters])
+                b._validate_index(i, column=False)
+                b._validate_index(j, column=True)
+                coords_list.append(Coordinates(i, j))
+            except ValueError as e:
+                print_game_msg(f'Can\'t parse coordinates from "{coord}", try again or leave empty (details: {e})')
+        return coords_list
 
 
 while True:
-    i, j = input_coordinates()
+    coords = input_coordinates()
 
-    target_action_letter = input(f'Action ({" | ".join([str(a) for a in actions])}) -> ').upper()
-    for action in actions:
-        if action.letter == target_action_letter:
-            action.func(i, j)
+    b.set_pointers([(c.i, c.j) for c in coords])
+    if coords:
+        b.render()
+
+    while True:
+        target_action_letter = input(f'Action ({" | ".join([str(a) for a in actions])}) -> ').upper()
+        action = actions_by_letter.get(target_action_letter, None)
+        if action is not None:
             break
-    else:
-        continue
+        else:
+            print_game_msg(f'Invalid action letter, try again')
 
+    if action.is_positional:
+        if not coords:
+            print_game_msg(f'{action.description} is positional action, provide coodinates!')
+            continue
+        else:
+            for coord in coords:
+                action(coord.i, coord.j)
+    else:
+        action()
+
+    b.set_pointers([])
     b.render()
 
     if b.game_over:
-        print(ansi.modify('\n\tgame over!', codes=[ansi.TEXT.RED, ansi.TEXT.UNDER]))
+        print(ansi.modify('\n\tgame over!\n', codes=[ansi.TEXT.YELLOW, ansi.TEXT.UNDER]))
         break
     elif b.game_winned:
-        print(ansi.modify('\ncongratulations!', codes=[ansi.TEXT.RED, ansi.TEXT.UNDER]))
+        print(ansi.modify('\n\tcongratulations!\n', codes=[ansi.TEXT.YELLOW, ansi.TEXT.UNDER]))
         break
