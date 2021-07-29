@@ -34,7 +34,7 @@ actions = [
     Action('U', b.unmark_cell, 'Unmark', True),
     Action('N', b.open_neighbors, 'Open neighbors', True),
     Action('C', lambda *_: None, 'Change cell', False),
-    Action('F', lambda *_: b.play_forward(), 'Fast forward', False),
+    Action('F', lambda *_: b.fast_forward(), 'Fast forward', False),
     Action('E', lambda *_: b.evaluate_probabilities(), 'Evaluate probabilities', False),
     Action('I', lambda *_: b.info(), 'Info', False),
     Action('P', lambda *_: b.render_as_plot(), 'Plot', False),

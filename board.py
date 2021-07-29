@@ -105,11 +105,11 @@ class Board:
                 if not self.is_marked[i_n, j_n]:
                     self.open_cell(i_n, j_n)
 
-    def play_forward(self):
+    def fast_forward(self):
         if not self.board_created:
             print(self.BOARD_NOT_CREATED_MSG)
             return
-        if self.mine_freq is not None:
+        if self.mine_freq is not None and self.fast_forward_safe:
             for i, j in self._board_idx():
                 if self.mine_freq_mask[i, j]:
                     if self.mine_freq[i, j] == 0:
@@ -171,11 +171,33 @@ class Board:
         if not self.board_created:
             print(self.BOARD_NOT_CREATED_MSG)
             return
+
+        MAX_BRUTEFORCE_CHOICES = 5e6
         
         total_choices = math.comb(self.cells_left, self.mines_left)
-        if total_choices > 1e8:
-            print(ansi.modify("\nToo much choices to brute-force :(\n", [ansi.TEXT.BOLD]))
-            return
+
+        if total_choices < MAX_BRUTEFORCE_CHOICES:
+            self.fast_forward_safe = True
+            n_trial = total_choices
+            trial_indices_generator = combinations
+        else:
+            self.fast_forward_safe = False
+            n_trial = int(min(total_choices / 2, MAX_BRUTEFORCE_CHOICES))
+            rng = np.random.default_rng()
+
+            batch_size = 1000
+            n_batch = n_trial // batch_size
+
+            n_trial = n_batch * batch_size
+
+            def trial_indices_generator(indices, number):
+                indices_size = indices.size
+                # for _ in range(n_trial):
+                #     yield indices[rng.integers(0, indices_size, size=number)]
+                for _ in range(n_batch):
+                    batch = rng.integers(0, indices_size, size=(batch_size, number))
+                    for rand_choice in batch:
+                        yield indices[rand_choice]
 
         is_trial = np.logical_not(self.is_open + self.is_marked)
         is_affected = np.zeros_like(is_trial, dtype=bool)
@@ -205,7 +227,7 @@ class Board:
         trial_freq_flat = np.zeros_like(trial_idx_flat, dtype=int)
         total_valid_combinations = 0
         ii = np.arange(trial_idx_flat.size)
-        for mines_ii in tqdm(combinations(ii, self.mines_left), total=total_choices):
+        for mines_ii in tqdm(trial_indices_generator(ii, self.mines_left), total=n_trial):
             mines_ii = np.array(mines_ii)
             mines_idx = trial_idx_flat[mines_ii]
 
