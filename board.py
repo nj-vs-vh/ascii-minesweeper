@@ -4,6 +4,7 @@ from itertools import combinations
 from string import ascii_uppercase
 from numba import njit
 from tqdm import tqdm
+from enum import Enum
 
 import matplotlib
 matplotlib.use('Qt5Agg')
@@ -21,6 +22,23 @@ import ansi
 
 ColIndex = Union[int, str]
 RowIndex = int
+
+
+class AsciiColumnRendering(Enum):
+    ONE_CHAR = 1
+    THREE_CHARS = 3
+
+    def __call__(self, ch: str, fillable: bool = False) -> str:
+        if self is self.ONE_CHAR:
+            return ch
+        if self is self.THREE_CHARS:
+            if fillable:
+                return ch * 3
+            else:
+                return ' ' + ch + ' '
+
+
+COL_RENDERING = AsciiColumnRendering.ONE_CHAR
 
 
 class Board:
@@ -166,7 +184,7 @@ class Board:
         codes = [ansi.TEXT.YELLOW]
         if float_idx - int_idx > 0.5:
             codes += [ansi.TEXT.BOLD]
-        return ansi.modify(self.ASCII_GREYSCALE[int_idx], codes)
+        return ansi.modify(COL_RENDERING(self.ASCII_GREYSCALE[int_idx]), codes)
 
     def evaluate_probabilities(self):
         if not self.board_created:
@@ -317,22 +335,23 @@ class Board:
 
     def _render_field(self, cell_char: Callable[[int, int], str]):
         max_number_len = len(str(self.rows - 1))
-        print(' ' * max_number_len + ' ' + self.column_index_letters)
+        letters_legend = ' ' * max_number_len + ' ' + ''.join(COL_RENDERING(s) for s in self.column_index_letters)
+        print(letters_legend)
 
         ruler_ansi_codes = [ansi.TEXT.BLUE]
-        top_ruler = ansi.modify('╔' + '═' * self.cols + '╗', codes=ruler_ansi_codes)
-        bot_ruler = ansi.modify('╚' + '═' * self.cols + '╝', codes=ruler_ansi_codes)
+        top_ruler = ' ' * max_number_len + ansi.modify('╔' + COL_RENDERING('═', fillable=True) * self.cols + '╗', codes=ruler_ansi_codes)
+        bot_ruler = ' ' * max_number_len + ansi.modify('╚' + COL_RENDERING('═', fillable=True) * self.cols + '╝', codes=ruler_ansi_codes)
         vert_ruler = ansi.modify('║', codes=ruler_ansi_codes)
 
-        print(' ' * max_number_len + top_ruler)
+        print(top_ruler)
         for i in range(self.rows):
             print(str(i).rjust(max_number_len) + vert_ruler, end='')
             for j in range(self.cols):
                 char = cell_char(i, j)
                 print(char, end='')
             print(vert_ruler + str(i))
-        print(' ' * max_number_len + bot_ruler)
-        print(' ' * max_number_len + ' ' + self.column_index_letters)
+        print(bot_ruler)
+        print(letters_legend)
 
     def render_mines(self):
         self._render_field(lambda i, j: 'm' if self.is_mine[i, j] else ' ')
@@ -354,24 +373,24 @@ class Board:
             if self.board_created:
                 if self.is_open[i, j]:
                     if self.is_mine[i, j]:
-                        ch = ansi.modify('m', [ansi.BACK.RED])
+                        ch = ansi.modify(COL_RENDERING('m'), [ansi.BACK.RED])
                     else:
                         near_mines = self.near_mines[i, j]
                         ch = (
-                            '░'
+                            COL_RENDERING('░', fillable=True)
                             if near_mines == 0
-                            else ansi.modify(str(near_mines), codes=[self.NEAR_MINES_COL[near_mines]])
+                            else ansi.modify(COL_RENDERING(str(near_mines)), codes=[self.NEAR_MINES_COL[near_mines]])
                         )
                 elif self.is_marked[i, j]:
-                    ch = '×'
+                    ch = COL_RENDERING('×')
                 else:
                     if self.mine_freq is None:
-                        ch = ' '
+                        ch = COL_RENDERING(' ', fillable=True)
                     else:
                         scaled_mine_prob = self.mine_freq[i, j] / self.mine_total_combinations
                         ch = self.mine_prob_colormap(scaled_mine_prob)
             else:
-                ch = ' '
+                ch = COL_RENDERING(' ', fillable=True)
 
             if self.is_pointer[i, j]:
                 ch = ansi.modify(ch, [ansi.BACK.MAGENTA, ansi.TEXT.BOLD])
