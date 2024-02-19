@@ -108,18 +108,19 @@ if __name__ == "__main__":
 
         b.set_pointers([])
         b.render()
+        print()
 
         if b.game_over:
             print(
                 ansi.modify(
-                    "\n\tgame over!\n", codes=[ansi.TEXT.YELLOW, ansi.TEXT.UNDER]
+                    "\n\tGAME OVER!\n", codes=[ansi.TEXT.RED, ansi.TEXT.UNDER]
                 )
             )
             break
         elif b.game_winned:
             print(
                 ansi.modify(
-                    "\n\tcongratulations!\n", codes=[ansi.TEXT.YELLOW, ansi.TEXT.UNDER]
+                    "\n\tCONGRATULATIONS!\n", codes=[ansi.TEXT.YELLOW, ansi.TEXT.UNDER]
                 )
             )
             break

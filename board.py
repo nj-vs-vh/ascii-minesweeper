@@ -199,7 +199,7 @@ class Board:
             print(self.BOARD_NOT_CREATED_MSG)
             return
 
-        MAX_BRUTEFORCE_CHOICES = 5e6
+        MAX_BRUTEFORCE_CHOICES = int(5e6)
 
         total_choices = math.comb(self.cells_left, self.mines_left)
 
@@ -210,7 +210,7 @@ class Board:
         else:
             print(
                 ansi.modify(
-                    f"The search space is too large, capping it at {MAX_BRUTEFORCE_CHOICES}!",
+                    f"The search space is too large, capping at {MAX_BRUTEFORCE_CHOICES}!",
                     [ansi.BACK.RED],
                 )
             )
