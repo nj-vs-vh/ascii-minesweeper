@@ -60,7 +60,21 @@ def input_coordinates(b: Board) -> List[Coordinates]:
 
 
 if __name__ == "__main__":
-    b = Board(rows=15, cols=18, mines=60)
+    default_board_config = "12/20/60"
+    board_config = (
+        input(
+            "Board configuration in the format: <rows>/<columns>/<mines>, "
+            + f"leave blank for default ({default_board_config}) -> "
+        )
+        or default_board_config
+    )
+    parts = board_config.split("/")
+    assert len(parts) == 3
+    rows = int(parts[0])
+    cols = int(parts[1])
+    mines = int(parts[2])
+
+    b = Board(rows=rows, cols=cols, mines=mines)
     actions = [
         Action("O", b.open_cell, "Open", True),
         Action("M", b.mark_cell, "Mark", True),
@@ -112,9 +126,7 @@ if __name__ == "__main__":
 
         if b.game_over:
             print(
-                ansi.modify(
-                    "\n\tGAME OVER!\n", codes=[ansi.TEXT.RED, ansi.TEXT.UNDER]
-                )
+                ansi.modify("\n\tGAME OVER!\n", codes=[ansi.TEXT.RED, ansi.TEXT.UNDER])
             )
             break
         elif b.game_winned:
