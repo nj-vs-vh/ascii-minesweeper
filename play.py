@@ -72,7 +72,7 @@ if __name__ == "__main__":
             "E", lambda: b.evaluate_probabilities(), "Evaluate probabilities", False
         ),
         Action("I", lambda: b.info(), "Info", False),
-        Action("P", lambda: b.render_as_plot(), "Plot", False),
+        # Action("P", lambda: b.render_as_plot(), "Plot", False),
         Action("Q", lambda: sys.exit(), "Quit", False),
     ]
     actions_by_letter = {a.letter: a for a in actions}
