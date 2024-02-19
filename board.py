@@ -2,12 +2,10 @@ import numpy as np
 import math
 from itertools import combinations
 from string import ascii_uppercase
-from numba import njit
+from numba import njit  # type: ignore
 from tqdm import tqdm
 from enum import Enum
 
-import matplotlib
-matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle, Circle
@@ -35,7 +33,9 @@ class AsciiColumnRendering(Enum):
             if fillable:
                 return ch * 3
             else:
-                return ' ' + ch + ' '
+                return " " + ch + " "
+        else:
+            raise ValueError(f"Unexpected self: {self}")
 
 
 COL_RENDERING = AsciiColumnRendering.ONE_CHAR
@@ -47,7 +47,7 @@ class Board:
         self.rows = rows
         self.cols = cols
         self.mines = mines
-        self.column_index_letters = ascii_uppercase[:self.cols]
+        self.column_index_letters = ascii_uppercase[: self.cols]
         self.is_open = self._flat2plane(np.zeros(self.cells_count, dtype=bool))
         self.is_marked = self._flat2plane(np.zeros(self.cells_count, dtype=bool))
         self.is_pointer = self._flat2plane(np.zeros(self.cells_count, dtype=bool))
@@ -55,13 +55,15 @@ class Board:
         self.board_created = False
         self.game_over = False
 
-        self.mine_freq = None
-        self.mine_freq_mask = None
-        self.mine_total_combinations = None
+        self.mine_freq: Optional[np.ndarray] = None
+        self.mine_freq_mask: Optional[np.ndarray] = None
+        self.mine_total_combinations: Optional[int] = None
 
     def _init_board(self):
         is_mine_flat = np.zeros(self.cells_count, dtype=bool)
-        is_mine_flat[np.random.choice(self.cells_count, self.mines, replace=False)] = True
+        is_mine_flat[np.random.choice(self.cells_count, self.mines, replace=False)] = (
+            True
+        )
         self.is_mine = self._flat2plane(is_mine_flat)
 
         self.near_mines = np.zeros((self.rows, self.cols), dtype=int)
@@ -90,7 +92,9 @@ class Board:
                 if not self.is_open[i_n, j_n]:
                     self.open_cell(i_n, j_n)
 
-    BOARD_NOT_CREATED_MSG = ansi.modify('\nOpen at least one cell first!\n', [ansi.TEXT.BOLD])
+    BOARD_NOT_CREATED_MSG = ansi.modify(
+        "\nOpen at least one cell first!\n", [ansi.TEXT.BOLD]
+    )
 
     def mark_cell(self, i: RowIndex, j: ColIndex):
         j = self._validate_index(j, column=True)
@@ -148,7 +152,10 @@ class Board:
                             self.mark_cell(i_n, j_n)
             for i, j in self._board_idx():
                 self.open_neighbors(i, j)
-            if np.sum(self.is_marked) == marked_before and np.sum(self.is_open) == open_before:
+            if (
+                np.sum(self.is_marked) == marked_before
+                and np.sum(self.is_open) == open_before
+            ):
                 break
 
     @property
@@ -168,15 +175,16 @@ class Board:
             print(self.BOARD_NOT_CREATED_MSG)
             return
         print(
-            '\n'
+            "\n"
             + ansi.modify(
-                f'Mines left: {self.mines_left} / {self.mines}\n'
-                + f'Cells left: {self.cells_left} / {self.rows * self.cols}',
-                codes=[ansi.TEXT.BOLD]
-            ) + '\n'
+                f"Mines left: {self.mines_left} / {self.mines}\n"
+                + f"Cells left: {self.cells_left} / {self.rows * self.cols}",
+                codes=[ansi.TEXT.BOLD],
+            )
+            + "\n"
         )
 
-    ASCII_GREYSCALE = ' ·+|┼╬▒▓█'
+    ASCII_GREYSCALE = " ·+|┼╬▒▓█"
 
     def mine_prob_colormap(self, prob: float):
         float_idx = len(self.ASCII_GREYSCALE) * prob - 1e-6
@@ -186,13 +194,13 @@ class Board:
             codes += [ansi.TEXT.BOLD]
         return ansi.modify(COL_RENDERING(self.ASCII_GREYSCALE[int_idx]), codes)
 
-    def evaluate_probabilities(self):
+    def evaluate_probabilities(self) -> None:
         if not self.board_created:
             print(self.BOARD_NOT_CREATED_MSG)
             return
 
         MAX_BRUTEFORCE_CHOICES = 5e6
-        
+
         total_choices = math.comb(self.cells_left, self.mines_left)
 
         if total_choices < MAX_BRUTEFORCE_CHOICES:
@@ -200,6 +208,12 @@ class Board:
             n_trial = total_choices
             trial_indices_generator = combinations
         else:
+            print(
+                ansi.modify(
+                    f"The search space is too large, capping it at {MAX_BRUTEFORCE_CHOICES}!",
+                    [ansi.BACK.RED],
+                )
+            )
             self.fast_forward_safe = False
             n_trial = int(min(total_choices / 2, MAX_BRUTEFORCE_CHOICES))
             rng = np.random.default_rng()
@@ -209,7 +223,7 @@ class Board:
 
             n_trial = n_batch * batch_size
 
-            def trial_indices_generator(indices, number):
+            def trial_indices_generator(indices, number):  # type: ignore
                 indices_size = indices.size
                 # for _ in range(n_trial):
                 #     yield indices[rng.integers(0, indices_size, size=number)]
@@ -246,8 +260,10 @@ class Board:
         trial_freq_flat = np.zeros_like(trial_idx_flat, dtype=int)
         total_valid_combinations = 0
         ii = np.arange(trial_idx_flat.size)
-        for mines_ii in tqdm(trial_indices_generator(ii, self.mines_left), total=n_trial):
-            mines_ii = np.array(mines_ii)
+        for mines_ii in tqdm(
+            trial_indices_generator(ii, self.mines_left), total=n_trial
+        ):
+            mines_ii = np.array(mines_ii)  # type: ignore
             mines_idx = trial_idx_flat[mines_ii]
 
             is_mine_trial[mines_idx] = True
@@ -266,7 +282,7 @@ class Board:
         self.mine_freq = freq.reshape((self.rows, self.cols))
         if total_valid_combinations == 0:
             self.mine_total_combinations = 1
-            print(ansi.modify('No valid combinations found!', [ansi.BACK.RED]))
+            print("No valid combinations found!")
         else:
             self.mine_total_combinations = total_valid_combinations
 
@@ -274,8 +290,8 @@ class Board:
         self.is_pointer[:] = False
         for i, j in pointers:
             i = self._validate_index(i, column=False)
-            j = self._validate_index(j, column=True)
-            self.is_pointer[i, j] = True
+            j_numeric = self._validate_index(j, column=True)
+            self.is_pointer[i, j_numeric] = True
 
     @property
     def game_winned(self) -> bool:
@@ -283,12 +299,17 @@ class Board:
             return False
         marked_total = np.sum(self.is_marked)
         open_total = np.sum(self.is_open)
-        return marked_total == self.mines and open_total + marked_total == self.rows * self.cols
+        return (
+            marked_total == self.mines
+            and open_total + marked_total == self.rows * self.cols
+        )
 
-    def _validate_index(self, index: Union[RowIndex, ColIndex], column: bool = True) -> int:
+    def _validate_index(
+        self, index: Union[RowIndex, ColIndex], column: bool = True
+    ) -> int:
         if isinstance(index, str):
             index = index.upper()
-            if index == '':
+            if index == "":
                 raise ValueError(f"Empty string passed as index")
             index = self.column_index_letters.index(index)
         if index < 0 or index >= (self.cols if column else self.rows):
@@ -300,7 +321,9 @@ class Board:
             for j in range(self.cols):
                 yield i, j
 
-    def _neighborhood_idx(self, i: int, j: int) -> Generator[Tuple[int, int], None, None]:
+    def _neighborhood_idx(
+        self, i: int, j: int
+    ) -> Generator[Tuple[int, int], None, None]:
         for di in (-1, 0, 1):
             for dj in (-1, 0, 1):
                 if di == 0 and dj == 0:
@@ -309,11 +332,9 @@ class Board:
                     yield i + di, j + dj
 
     def count_neighbors(self, i: int, j: int, values: np.ndarray) -> int:
-        return sum(
-            int(values[i_n, j_n]) for i_n, j_n in self._neighborhood_idx(i, j)
-        )
+        return sum(int(values[i_n, j_n]) for i_n, j_n in self._neighborhood_idx(i, j))
 
-    def get_fast_neighbor_counter(self):
+    def get_fast_neighbor_counter(self) -> Callable[[int, int, np.ndarray], int]:
         rows: int = self.rows
         cols: int = self.cols
 
@@ -327,7 +348,7 @@ class Board:
                     if 0 <= i + di < rows and 0 <= j + dj < cols:
                         summ += values[i + di, j + dj]
             return summ
-        
+
         return fast_neighbor_counter
 
     def _flat2plane(self, flattened_plane: np.ndarray) -> np.ndarray:
@@ -335,26 +356,36 @@ class Board:
 
     def _render_field(self, cell_char: Callable[[int, int], str]):
         max_number_len = len(str(self.rows - 1))
-        letters_legend = ' ' * max_number_len + ' ' + ''.join(COL_RENDERING(s) for s in self.column_index_letters)
+        letters_legend = (
+            " " * max_number_len
+            + " "
+            + "".join(COL_RENDERING(s) for s in self.column_index_letters)
+        )
         print(letters_legend)
 
         ruler_ansi_codes = [ansi.TEXT.BLUE]
-        top_ruler = ' ' * max_number_len + ansi.modify('╔' + COL_RENDERING('═', fillable=True) * self.cols + '╗', codes=ruler_ansi_codes)
-        bot_ruler = ' ' * max_number_len + ansi.modify('╚' + COL_RENDERING('═', fillable=True) * self.cols + '╝', codes=ruler_ansi_codes)
-        vert_ruler = ansi.modify('║', codes=ruler_ansi_codes)
+        top_ruler = " " * max_number_len + ansi.modify(
+            "╔" + COL_RENDERING("═", fillable=True) * self.cols + "╗",
+            codes=ruler_ansi_codes,
+        )
+        bot_ruler = " " * max_number_len + ansi.modify(
+            "╚" + COL_RENDERING("═", fillable=True) * self.cols + "╝",
+            codes=ruler_ansi_codes,
+        )
+        vert_ruler = ansi.modify("║", codes=ruler_ansi_codes)
 
         print(top_ruler)
         for i in range(self.rows):
-            print(str(i).rjust(max_number_len) + vert_ruler, end='')
+            print(str(i).rjust(max_number_len) + vert_ruler, end="")
             for j in range(self.cols):
                 char = cell_char(i, j)
-                print(char, end='')
+                print(char, end="")
             print(vert_ruler + str(i))
         print(bot_ruler)
         print(letters_legend)
 
     def render_mines(self):
-        self._render_field(lambda i, j: 'm' if self.is_mine[i, j] else ' ')
+        self._render_field(lambda i, j: "m" if self.is_mine[i, j] else " ")
 
     NEAR_MINES_COL = {
         1: ansi.TEXT.BLUE,
@@ -373,29 +404,34 @@ class Board:
             if self.board_created:
                 if self.is_open[i, j]:
                     if self.is_mine[i, j]:
-                        ch = ansi.modify(COL_RENDERING('m'), [ansi.BACK.RED])
+                        ch = ansi.modify(COL_RENDERING("m"), [ansi.BACK.RED])
                     else:
                         near_mines = self.near_mines[i, j]
                         ch = (
-                            COL_RENDERING('░', fillable=True)
+                            COL_RENDERING("░", fillable=True)
                             if near_mines == 0
-                            else ansi.modify(COL_RENDERING(str(near_mines)), codes=[self.NEAR_MINES_COL[near_mines]])
+                            else ansi.modify(
+                                COL_RENDERING(str(near_mines)),
+                                codes=[self.NEAR_MINES_COL[near_mines]],
+                            )
                         )
                 elif self.is_marked[i, j]:
-                    ch = COL_RENDERING('×')
+                    ch = COL_RENDERING("×")
                 else:
                     if self.mine_freq is None:
-                        ch = COL_RENDERING(' ', fillable=True)
+                        ch = COL_RENDERING(" ", fillable=True)
                     else:
-                        scaled_mine_prob = self.mine_freq[i, j] / self.mine_total_combinations
+                        scaled_mine_prob = (
+                            self.mine_freq[i, j] / self.mine_total_combinations
+                        )
                         ch = self.mine_prob_colormap(scaled_mine_prob)
             else:
-                ch = COL_RENDERING(' ', fillable=True)
+                ch = COL_RENDERING(" ", fillable=True)
 
             if self.is_pointer[i, j]:
                 ch = ansi.modify(ch, [ansi.BACK.MAGENTA, ansi.TEXT.BOLD])
             return ch
-            
+
         self._render_field(cell_char)
 
         if self.mine_freq is not None:
@@ -403,9 +439,18 @@ class Board:
             mine_prob_values = freq_values / self.mine_total_combinations
             # scaled_prob_values = freq_values / np.max(self.mine_freq)
 
-            print(ansi.modify('Mine probability:\n', codes=[ansi.TEXT.BOLD]))
-            print(''.join([s * 6 for s in [self.mine_prob_colormap(sp) for sp in mine_prob_values]]))
-            print(''.join([f' {p:.2f} ' for p in mine_prob_values]))
+            print(ansi.modify("Mine probability:\n", codes=[ansi.TEXT.BOLD]))
+            print(
+                "".join(
+                    [
+                        s * 6
+                        for s in [
+                            self.mine_prob_colormap(sp) for sp in mine_prob_values
+                        ]
+                    ]
+                )
+            )
+            print("".join([f" {p:.2f} " for p in mine_prob_values]))
 
     def render_as_plot(self):
         max_edge_size_px = 500
@@ -415,22 +460,22 @@ class Board:
         fig, ax = plt.subplots(
             figsize=(
                 px_per_rowcol * (self.cols + additional_cols) / dpi,
-                px_per_rowcol * self.rows / dpi
+                px_per_rowcol * self.rows / dpi,
             ),
             dpi=dpi,
         )
 
-        GRID_COLOR = '#d4d4d4'
-        OPEN_CELL = '#D5D9E0'
+        GRID_COLOR = "#d4d4d4"
+        OPEN_CELL = "#D5D9E0"
         NEAR_MINES = {
-            1: '#4AA5F0',
-            2: '#8CC265',
-            3: '#E05561',
-            4: '#C162DE',
-            5: '#D18F52',
-            6: '#D18F52',
-            7: '#D18F52',
-            8: '#D18F52',
+            1: "#4AA5F0",
+            2: "#8CC265",
+            3: "#E05561",
+            4: "#C162DE",
+            5: "#D18F52",
+            6: "#D18F52",
+            7: "#D18F52",
+            8: "#D18F52",
         }
 
         # grid and labels
@@ -462,7 +507,7 @@ class Board:
         # numbers in cells and marked mines
         # determining text position in data units
         test_font_size = 10
-        test_text = ax.text(0.5, 0.5, 'test', {'size': test_font_size})
+        test_text = ax.text(0.5, 0.5, "test", {"size": test_font_size})
         r = fig.canvas.get_renderer()
 
         data_zero_disp_x, data_zero_disp_y = ax.transData.transform((0, 0))
@@ -470,7 +515,7 @@ class Board:
         def get_text_width_height(t: plt.Text) -> Tuple[float, float]:
             bb = t.get_window_extent(renderer=r)
             return ax.transData.inverted().transform(
-                (data_zero_disp_x + bb.width, data_zero_disp_y+bb.height)
+                (data_zero_disp_x + bb.width, data_zero_disp_y + bb.height)
             )
 
         target_text_height = 0.7
@@ -482,11 +527,13 @@ class Board:
             if self.is_open[i, j] and self.near_mines[i, j] > 0:
                 si, sj = board2screen(i, j)
                 ax.text(
-                    si, sj, str(self.near_mines[i, j]),
-                    {'size': font_size},
+                    si,
+                    sj,
+                    str(self.near_mines[i, j]),
+                    {"size": font_size},
                     color=NEAR_MINES[self.near_mines[i, j]],
-                    ha='center',
-                    va='center',
+                    ha="center",
+                    va="center",
                 )
             if self.is_marked[i, j]:
                 si, sj = board2screen(i, j)
@@ -496,18 +543,20 @@ class Board:
                     Line2D(
                         xdata=np.array([pad, 1 - pad, 0.5, 0.5]) + si - 0.5,
                         ydata=np.array([pad, pad, pad, flag_center_y]) + sj - 0.5,
-                        color='black',
+                        color="black",
                     ),
                 )
                 ax.add_patch(
                     Circle(
-                        (si, sj - 0.5 + flag_center_y), radius=(1 - flag_center_y - pad),
-                        facecolor='red', zorder=1000,
+                        (si, sj - 0.5 + flag_center_y),
+                        radius=(1 - flag_center_y - pad),
+                        facecolor="red",
+                        zorder=1000,
                     )
                 )
-        
+
         if self.mine_freq is not None:
-            cmap = get_cmap('hot').reversed()
+            cmap = get_cmap("hot").reversed()
             # for i, j in self._board_idx():
             rects = []
             for i, j in self._board_idx():
@@ -515,12 +564,17 @@ class Board:
                     si, sj = board2screen(i, j)
                     ax.add_patch(
                         Rectangle(
-                            (si - 0.5, sj - 0.5), 1, 1,
-                            facecolor=cmap((self.mine_freq[i, j] / self.mine_total_combinations) - 1e-6)
+                            (si - 0.5, sj - 0.5),
+                            1,
+                            1,
+                            facecolor=cmap(
+                                (self.mine_freq[i, j] / self.mine_total_combinations)
+                                - 1e-6
+                            ),
                         )
                     )
 
             cbar = fig.colorbar(ScalarMappable(cmap=cmap))
-            cbar.set_label('Mine probability')
+            cbar.set_label("Mine probability")
 
         plt.show()
