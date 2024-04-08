@@ -435,9 +435,12 @@ class Board:
         self._render_field(cell_char)
 
         if self.mine_freq is not None:
-            freq_values = np.unique(self.mine_freq)
+            mine_freq_flat = self.mine_freq.flatten()
+            min_freq = np.min(mine_freq_flat[mine_freq_flat > 0])
+            max_freq = np.max(mine_freq_flat)
+            values_count = min(20, np.unique(mine_freq_flat).size)
+            freq_values = np.linspace(min_freq, max_freq, values_count)
             mine_prob_values = freq_values / self.mine_total_combinations
-            # scaled_prob_values = freq_values / np.max(self.mine_freq)
 
             print(ansi.modify("Mine probability:\n", codes=[ansi.TEXT.BOLD]))
             print(
